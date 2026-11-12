@@ -1,14 +1,16 @@
 'use strict';
 
 const mgu = require('./kit/mgu');
+const { t: translate, getLanguage } = require('./kit/i18n');
 const { ScaledCanvas } = require('./kit/canvas');
-const Weather = require('./weather/service');
-const ManualLocation = require('./location/manual');
-const GPS = require('./location/gps');
+const Weather = require('./weather-service');
+const ManualLocation = require('./location-manual');
+const GPS = require('./location-gps');
 
 const W = 1600, H = 520;
 const BG = '#080b10', PANEL = '#111720', RED = '#e31b36';
 const MUTED = '#8c98a8', WHITE = '#f3f5f8';
+const MISSING_LOCATION = 'Setează coordonatele în Setări pentru a primi prognoza meteo.';
 
 function number(value, digits) {
     return typeof value === 'number' && isFinite(value) ? value.toFixed(digits || 0) : '--';
@@ -47,14 +49,16 @@ mgu.run({
             error = '';
             try {
                 const loc = await location();
-                if (!loc) throw new Error('Setează coordonatele în Setări pentru a primi prognoza meteo.');
+                if (!loc) throw new Error(MISSING_LOCATION);
                 const result = await service.refresh(loc);
                 data = result.data;
                 stale = result.stale;
                 if (result.error) error = 'Date salvate · conexiune indisponibilă';
             } catch (e) {
-                error = e && e.message ? e.message : String(e);
-                log.warn('weather refresh: ' + error);
+                const details = e && e.message ? e.message : String(e);
+                error = getLanguage() === 'zh-CN' && details !== MISSING_LOCATION
+                    ? 'Unable to refresh weather' : details;
+                log.warn('weather refresh: ' + details);
             } finally {
                 busy = false;
             }
@@ -69,7 +73,6 @@ mgu.run({
         }
 
         function drawMain() {
-            const t = ctx.theme();
             const cv = ctx.canvas(W, H).clear(BG);
             cv.fillRect(0, 0, W, 5, RED);
             cv.text('BMW WEATHER', 64, 58, 24, RED, { font: 'bold', spacing: 3 });
@@ -87,7 +90,7 @@ mgu.run({
             if (page === 0) {
                 cv.text(number(c.temperature, 0) + '°', 92, 285, 150, WHITE, { font: 'num' });
                 cv.text(c.description || 'Condiții meteo', 100, 340, 32, WHITE, { font: 'bold' });
-                cv.text('SE SIMTE CA ' + number(c.feelsLike, 0) + '°', 102, 382, 19, MUTED, { spacing: 1.5 });
+                cv.text(translate('SE SIMTE CA') + ' ' + number(c.feelsLike, 0) + '°', 102, 382, 19, MUTED, { spacing: 1.5 });
 
                 const cards = [
                     ['VÂNT', number(c.wind, 0) + ' km/h'],
@@ -102,7 +105,7 @@ mgu.run({
                     cv.text(item[0], x + 18, 195, 15, MUTED, { font: 'bold', spacing: 1.5 });
                     cv.text(item[1], x + 18, 260, 27, WHITE, { font: 'bold' });
                 });
-                cv.text('ACTUALIZAT ' + (data.fetchedAt || '').replace('T', ' ').slice(0, 16), 660, 365, 17, MUTED);
+                cv.text(translate('ACTUALIZAT') + ' ' + (data.fetchedAt || '').replace('T', ' ').slice(0, 16), 660, 365, 17, MUTED);
             } else {
                 cv.text('PROGNOZĂ ORARĂ', 80, 135, 23, WHITE, { font: 'bold', spacing: 2 });
                 const rows = (data.hourly || []).slice(0, 8);
@@ -111,7 +114,7 @@ mgu.run({
                     cv.fillRect(x, 175, 160, 190, PANEL);
                     cv.text(hour(item.time), x + 18, 215, 19, RED, { font: 'bold' });
                     cv.text(number(item.temperature, 0) + '°', x + 18, 280, 38, WHITE, { font: 'num' });
-                    cv.text(number(item.precipitationProbability, 0) + '% ploaie', x + 18, 325, 15, MUTED);
+                    cv.text(number(item.precipitationProbability, 0) + translate('% ploaie'), x + 18, 325, 15, MUTED);
                 });
                 cv.text('PROGNOZĂ ZILNICĂ', 80, 420, 18, MUTED, { font: 'bold', spacing: 2 });
                 (data.daily || []).slice(0, 5).forEach(function (item, i) {

@@ -2,8 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const api = require('./api');
-const normalize = require('./normalize');
+const api = require('./weather-api');
+const normalize = require('./weather-normalize');
 
 function create(dataDir, log) {
     const cacheFile = path.join(dataDir, 'weather-cache.json');

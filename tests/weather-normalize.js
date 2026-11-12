@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const weather = require('../apps/flash8523_bmw_weather/weather/normalize');
+const weather = require('../apps/flash8523_bmw_weather/weather-normalize');
 
 const result = weather.normalize({
     timezone: 'Europe/Bucharest',
